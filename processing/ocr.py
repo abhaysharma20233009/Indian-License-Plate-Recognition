@@ -38,7 +38,7 @@ def ocr(license_plate):
         )
 
         best_match = ""
-        best_match_score = 0.0
+        best_match_score = -1.0
 
         for char, template in templates.items():
             score = cv2.matchTemplate(character, template, cv2.TM_CCOEFF_NORMED)[0][0]
@@ -68,7 +68,10 @@ def ocr(license_plate):
         plate_number += best_match
         confidence.append(best_match_score)
 
-    return plate_number, np.mean(confidence)
+    if not confidence:
+       return "", 0.0
+
+    return plate_number, float(np.mean(confidence))
 
 
 def load_templates(template_path):
@@ -81,7 +84,7 @@ def load_templates(template_path):
     Returns:
     dict: A dictionary where keys are character labels and values are template images.
     """
-
+    
     templates = {}
     for filename in os.listdir(template_path):
         if filename.endswith(".png"):
@@ -95,53 +98,105 @@ def load_templates(template_path):
             )
 
             templates[char] = template
-
+    if not templates:
+       raise ValueError("No character templates found in ./characters")
     return templates
 
 
 def segment_characters(license_plate):
     """
-    Segment characters from a license plate image.
+    Segment individual characters from an Indian license plate.
 
-    Args:
-    license_plate (numpy.ndarray): The license plate image.
-
-    Returns:
-    list: A list of segmented character images.
+    Uses Otsu thresholding and connected component analysis
+    instead of Canny edge contours.
     """
 
-    edges = cv2.Canny(license_plate, 100, 200)
-    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # Ensure grayscale image
+    if len(license_plate.shape) == 3:
+        gray = cv2.cvtColor(license_plate, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = license_plate.copy()
 
-    best_contours = []
-    for c in contours:
-        if config.DEBUG:
-            print("Contour area:", cv2.contourArea(c))
-            print("Width:", cv2.boundingRect(c)[2])
-            print("Height:", cv2.boundingRect(c)[3])
-            img = license_plate.copy()
-            img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-            cv2.drawContours(img, [c], -1, (0, 255, 0), 2)
-            display_image("Plate Image", img, False)
+    plate_height, plate_width = gray.shape
+
+    # Convert dark characters on a light background to white foreground
+    _, binary = cv2.threshold(
+        gray,
+        0,
+        255,
+        cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
+    )
+
+    # Handle plates with light characters on a dark background
+    if np.count_nonzero(binary) / binary.size > 0.5:
+        binary = cv2.bitwise_not(binary)
+
+    # Remove small gaps in character strokes
+    kernel = np.ones((2, 2), np.uint8)
+    binary = cv2.morphologyEx(
+        binary,
+        cv2.MORPH_CLOSE,
+        kernel
+    )
+
+    # Find connected components
+    count, labels, stats, centroids = cv2.connectedComponentsWithStats(
+        binary,
+        connectivity=8
+    )
+
+    best_components = []
+
+    for i in range(1, count):
+        x, y, w, h, area = stats[i]
+        # Ignore components touching the plate boundaries
+        if (
+            x <= 1
+            or y <= 1
+            or x + w >= plate_width - 1
+            or y + h >= plate_height - 1
+        ):
+            continue
+
+        # Relative dimensions
+        width_ratio = w / plate_width
+        height_ratio = h / plate_height
+        area_ratio = area / (plate_width * plate_height)
 
         if (
-            cv2.boundingRect(c)[2] > config.OCR_CHARACTER_WIDTH_MIN
-            and cv2.boundingRect(c)[2] < config.OCR_CHARACTER_WIDTH_MAX
-            and cv2.boundingRect(c)[3] > config.OCR_CHARACTER_HEIGHT_MIN
-            and cv2.boundingRect(c)[3] < config.OCR_CHARACTER_HEIGHT_MAX
+            config.OCR_CHARACTER_WIDTH_RATIO_MIN <= width_ratio
+            <= config.OCR_CHARACTER_WIDTH_RATIO_MAX
+            and config.OCR_CHARACTER_HEIGHT_RATIO_MIN <= height_ratio
+            <= config.OCR_CHARACTER_HEIGHT_RATIO_MAX
+            and area_ratio >= config.OCR_CHARACTER_AREA_RATIO_MIN
         ):
-            best_contours.append(c)
+            best_components.append((x, y, w, h))
 
-    # Only keep 8 the largest contours
-    best_contours = sorted(best_contours, key=cv2.contourArea, reverse=True)[:8]
-
-    # Sort contours by x position
-    best_contours = sorted(best_contours, key=lambda c: cv2.boundingRect(c)[0])
+    # Sort characters from left to right
+    best_components.sort(key=lambda box: box[0])
 
     characters = []
-    for c in best_contours:
-        x, y, w, h = cv2.boundingRect(c)
-        character = license_plate[y : y + h, x : x + w]
+
+    for x, y, w, h in best_components:
+        character = gray[y:y + h, x:x + w]
         characters.append(character)
+
+    if config.DEBUG:
+        debug_image = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+
+        for x, y, w, h in best_components:
+            cv2.rectangle(
+                debug_image,
+                (x, y),
+                (x + w, y + h),
+                (0, 255, 0),
+                2
+            )
+
+        display_image("Segmented Characters", debug_image, True)
+        display_image("Binary Plate", binary, True)
+
+        print("Characters segmented:", len(characters))
+        print("Character dimensions:", best_components)
 
     return characters

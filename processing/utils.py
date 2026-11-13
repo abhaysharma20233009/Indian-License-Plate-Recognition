@@ -25,23 +25,25 @@ def normalize_image(image):
     return image
 
 
+
 def validate_license_plate(plate):
     """
-    Validate a Polish license plate.
+    Validate a common Indian vehicle registration number.
 
-    Args:
-    plate (str): A string representing the license plate to be validated.
-
-    Returns:
-    bool: True if the plate is valid, False otherwise.
+    Examples:
+        TN87C5106
+        UP32AB1234
+        DL8CAF1234
+        MH12DE1433
     """
 
-    if len(plate) not in [7, 8]:
-        return False
+    plate = re.sub(r"[^A-Z0-9]", "", plate.upper())
 
-    pattern = r"^[A-Z]{1,2}[A-Z0-9]{4,7}$"
+    # State code + RTO number + series + vehicle number
+    pattern = r"^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{1,4}$"
 
-    return bool(re.match(pattern, plate))
+    return bool(re.fullmatch(pattern, plate))
+
 
 
 def sort_polygon_corners(coordinates):
