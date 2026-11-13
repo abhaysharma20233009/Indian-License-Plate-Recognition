@@ -138,7 +138,7 @@ def detect_license_plate(image):
                         license_plate = cv2.erode(license_plate, kernel, iterations=1)
 
                         return license_plate
-                    return None
+                    continue
 
 
 def sort_polygon_corners(coordinates):

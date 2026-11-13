@@ -39,4 +39,4 @@ def get_license_plate(image_path):
     else:
         print("No license plate detected.", file=sys.stderr)
 
-    return "POS30W3"  # Hope for the best
+    return None  # Hope for the best

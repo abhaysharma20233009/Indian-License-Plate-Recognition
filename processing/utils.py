@@ -38,11 +38,20 @@ def validate_license_plate(plate):
     """
 
     plate = re.sub(r"[^A-Z0-9]", "", plate.upper())
+    cleaned_text = re.sub(r'[^A-Z0-9]', '', plate.upper())
 
     # State code + RTO number + series + vehicle number
-    pattern = r"^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{1,4}$"
+    patterns = [
+        r"^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{1,4}$",  # Standard State format
+        r"^\d{2}BH\d{4}[A-Z]{1,2}$",              # BH Series format
+        r"^[A-Z]{1,2}\d{2}\d{4}$"                # Regional shorthand
+    ]
 
-    return bool(re.fullmatch(pattern, plate))
+    for pattern in patterns:
+        if re.match(pattern, cleaned_text):
+            return True, cleaned_text
+
+    return False, cleaned_text
 
 
 

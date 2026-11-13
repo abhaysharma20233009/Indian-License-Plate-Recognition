@@ -46,24 +46,6 @@ def ocr(license_plate):
                 best_match = char
                 best_match_score = score
 
-        # Quirks
-        if i == 0 or i == 1:
-            best_match_map = {
-                "0": "O",
-                "1": "I",
-                "2": "Z",
-                "4": "A",
-                "3": "E",
-                "5": "S",
-                "6": "G",
-                "7": "T",
-                "8": "B",
-                "9": "P",
-            }
-            best_match = best_match_map.get(best_match, best_match)
-
-        if i > 0 and plate_number[-1] == "O" and best_match == "O":
-            best_match = "0"
 
         plate_number += best_match
         confidence.append(best_match_score)

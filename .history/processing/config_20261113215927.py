@@ -1,0 +1,33 @@
+DEBUG = True
+
+
+
+PLATE_WIDTH = 520 + 100  # Add some extra since we cut off the sides
+PLATE_HEIGHT = 114
+
+PLATE_AREA_MIN = 500000
+
+PLATE_ASPECT_RATIO_MIN = 2.5
+PLATE_ASPECT_RATIO_MAX = 7.5
+PLATE_EXTENT_MIN = 0.7
+PLATE_SOLIDITY_MIN = 0.75
+# OCR template dimensions
+OCR_CHARACTER_WIDTH = 27
+OCR_CHARACTER_HEIGHT = 40
+
+IMAGE_WIDTH = 3968
+
+# Relaxed width and height bounds to handle varied camera distances and resolutions
+PLATE_WIDTH_MIN = 150
+PLATE_WIDTH_MAX = 3800
+PLATE_HEIGHT_MIN = 40
+PLATE_HEIGHT_MAX = 900
+
+# Character segmentation thresholds (relative to plate dimensions)
+OCR_CHARACTER_WIDTH_RATIO_MIN = 0.008
+OCR_CHARACTER_WIDTH_RATIO_MAX = 0.20
+
+OCR_CHARACTER_HEIGHT_RATIO_MIN = 0.40
+OCR_CHARACTER_HEIGHT_RATIO_MAX = 0.95
+
+OCR_CHARACTER_AREA_RATIO_MIN = 0.0015
