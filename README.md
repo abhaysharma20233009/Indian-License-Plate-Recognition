@@ -89,6 +89,4 @@ License plates detected: 26/26
 Total points: 259/267
 ```
 
-## License
 
-This repository is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.
